@@ -1,0 +1,2 @@
+FLASK_APP=myminiblog.py
+FLASK_DEBUG=1

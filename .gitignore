@@ -1,0 +1,6 @@
+*.db
+*.docx
+note.md
+/venv
+/__pycache__
+/.vscode
