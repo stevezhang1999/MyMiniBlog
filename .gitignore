@@ -1,6 +1,6 @@
 *.db
 *.docx
-note.md
+/notes
 /venv
 /__pycache__
 /.vscode

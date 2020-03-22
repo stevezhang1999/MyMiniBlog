@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Sign In</h1>
+    <h1>Register</h1>
     <form action="" method="post" novalidate>
-        <!-- csfr token is generated automatically -->
-        {{form.hidden_tag()}}
+        {{ form.hidden_tag() }}
         <p>
             {{ form.username.label }}<br>
             {{ form.username(size=32) }}<br>
@@ -13,15 +12,26 @@
             {% endfor %}
         </p>
         <p>
+            {{ form.email.label }}<br>
+            {{ form.email(size=64) }}<br>
+            {% for error in form.email.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>
             {{ form.password.label }}<br>
-            <!-- length of the form -->
             {{ form.password(size=32) }}<br>
             {% for error in form.password.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
         </p>
-        <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
+        <p>
+            {{ form.password_repeat.label }}<br>
+            {{ form.password_repeat(size=32) }}<br>
+            {% for error in form.password_repeat.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
         <p>{{ form.submit() }}</p>
     </form>
-    <p>New user? <a href="{{ url_for('register') }}">Click to Register!</a></p>
 {% endblock %}
