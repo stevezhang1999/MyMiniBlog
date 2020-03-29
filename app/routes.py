@@ -33,19 +33,31 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-
+    #flash("login")
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
 
     form = LoginForm()
     if form.validate_on_submit():
+        #flash("come validate on submit")
 
         user = User.query.filter_by(username=form.username.data).first()
+        #flash("if user is none: {}".format(user is None))
+        #flash("password good: {}".format(user.check_password(form.password.data)))
         if user is None or not user.check_password(form.password.data):
+            
             flash('Invalid username or password')
-            redirect(url_for('login'))
+            
+            #flash("is authenticated: {}".format(current_user.is_authenticated) )
+            #flash("is anoymous: {}".format(current_user.is_anonymous))
+            #flash("current user: {}".format(current_user.username))
+            #flash('Redirecting...')
+            return redirect(url_for('login'))
+        #else: 
+        #flash("good")
         login_user(user, remember=form.remember_me.data)
+        #flash("current user: {}".format(current_user.username))
         
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
