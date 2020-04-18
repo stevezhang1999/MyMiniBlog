@@ -29,7 +29,7 @@ Traceback (most recent call last):
   File "/mnt/c/Users/hp/Documents/flask_learning/microblog/app/templates/user.html", line 1, in top-level template code
     {% extends "base.html" %}
   File "/mnt/c/Users/hp/Documents/flask_learning/microblog/app/templates/base.html", line 30, in top-level template code
-    {% block content %}{% endblock %}
-  File "/mnt/c/Users/hp/Documents/flask_learning/microblog/app/templates/user.html", line 13, in block "content"
+    {% block app_content %}{% endblock %}
+  File "/mnt/c/Users/hp/Documents/flask_learning/microblog/app/templates/user.html", line 13, in block "app_content"
     {% elif not current_user.if_following(user) %}
 jinja2.exceptions.UndefinedError: 'app.models.User object' has no attribute 'if_following'
