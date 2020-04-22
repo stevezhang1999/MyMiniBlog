@@ -21,10 +21,16 @@ bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login = LoginManager(app)
-login.login_view = 'login'
+login.login_view = 'auth.login'
 login.login_message = _l('Veuillez vous connecter pour accéder à cette page.')
 mail = Mail(app)
 babel = Babel(app)
+
+from app.errors import bp as errors_bp
+app.register_blueprint(errors_bp)
+
+from app.auth import bp as auth_bp
+app.register_blueprint(auth_bp, url_prefix='/auth')
 
 @babel.localeselector
 def get_locale():
@@ -64,4 +70,4 @@ if not app.debug:
         app.logger.info('My Blog startup.')
 
 # avoid mutual references
-from app import routes, models, errors
+from app import models

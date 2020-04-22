@@ -46,10 +46,6 @@ class EditProfileForm(FlaskForm):
             if user is not None:
                 raise ValidationError('Username Occupied. Please use another name.')
 
-class PostForm(FlaskForm):
-    post = TextAreaField('Say something...', validators=[Length(min=0, max=140)])
-    submit = SubmitField('Submit')
-
 class ResetPasswordRequest(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()]) 
     submit = SubmitField('Send email')
