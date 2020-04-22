@@ -1,7 +1,7 @@
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
 
-from app import app, db
+from app import db
 # from app.auth.forms import LoginForm, RegisterationForm, ResetPasswordRequest, ResetPasswordForm
 from app.auth.forms import LoginForm, RegisterationForm, ResetPasswordForm, ResetPasswordRequest
 from app.models import User, Post
@@ -15,7 +15,7 @@ from datetime import datetime
 
 from app.auth import bp
 
-@app.before_request
+@bp.before_request
 def before_request():
     if current_user:
         if current_user.is_authenticated:

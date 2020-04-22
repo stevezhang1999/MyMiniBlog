@@ -1,7 +1,8 @@
 from flask import render_template, flash, redirect, url_for, request
 from werkzeug.urls import url_parse
+from flask import current_app
 
-from app import app, db
+from app import db
 from app.main.forms import EditProfileForm, PostForm
 from app.models import User, Post
 
@@ -13,7 +14,7 @@ from datetime import datetime
 
 from app.main import bp
 
-@app.before_request
+@bp.before_request
 def before_request():
     if current_user:
         if current_user.is_authenticated:
@@ -33,7 +34,7 @@ def index():
         return redirect(url_for('main.index'))
 
     page = request.args.get('page', 1, int)
-    posts = current_user.followed_posts().paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = current_user.followed_posts().paginate(page, current_app.config['POSTS_PER_PAGE'], False)
 
     next_url = url_for('main.index', page=posts.next_num) \
         if posts.has_next else None
@@ -49,7 +50,7 @@ def index():
 def user(username):
     page = request.args.get('page', 1, int)
     user = User.query.filter_by(username=username).first()
-    posts = user.posts.paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = user.posts.paginate(page, current_app.config['POSTS_PER_PAGE'], False)
     next_url = url_for('main.user', username=username, page=posts.next_num) \
         if posts.has_next else None
     prev_url = url_for('main.user', username=username, page=posts.prev_num) \
@@ -108,7 +109,7 @@ def unfollow(username):
 @login_required
 def explore():
     page = request.args.get('page', 1, int)
-    posts = Post.query.order_by(Post.timestamp.desc()).paginate(page, app.config['POSTS_PER_PAGE'], False)
+    posts = Post.query.order_by(Post.timestamp.desc()).paginate(page, current_app._get_current_object().config['POSTS_PER_PAGE'], False)
     next_url = url_for('main.explore', page=posts.next_num) \
         if posts.has_next else None
     prev_url = url_for('main.explore', page=posts.prev_num) \
