@@ -24,4 +24,7 @@ class Config(object):
     #
     POSTS_PER_PAGE = 3
 
+    # elsticsearch
+    ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL')
+
     LANGUAGES = ['en', 'jp']
