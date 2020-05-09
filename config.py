@@ -9,6 +9,9 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(base_dir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # redis url
+    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
     
     # secret key
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'ssseeecccrrreeettt'

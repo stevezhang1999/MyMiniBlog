@@ -3,8 +3,8 @@ from werkzeug.urls import url_parse
 from flask import current_app, g
 
 from app import db
-from app.main.forms import EditProfileForm, PostForm, SearchForm
-from app.models import User, Post
+from app.main.forms import EditProfileForm, PostForm, SearchForm, MessageForm
+from app.models import User, Post, Message
 
 from flask_login import current_user, login_user
 from flask_login import logout_user
@@ -121,10 +121,12 @@ def explore():
 @bp.route('/search')
 @login_required
 def search():
+    flash("validate {}".format(g.search_form.validate()) )
     if not g.search_form.validate():
         return redirect(url_for('main.explore'))
+    flash("validate {}".format(g.search_form.validate()) )
 
-    page = request.args.get('page', 1, type='int')
+    page = request.args.get('page', 1, type=int)
     posts, total = Post.search(g.search_form.q.data,  page=page, 
                                     per_page=current_app.config['POSTS_PER_PAGE'])
 
@@ -140,3 +142,33 @@ def search():
         next_url=next_url,
         prev_url=prev_url
     )
+
+@bp.route('/messages')
+@login_required
+def messages():
+    current_user.last_message_read_time = datetime.utcnow()
+    db.session.commit()
+
+    page = request.args.get('page', 1, int)
+    msgs = current_user.messages_received.order_by(Message.timestamp.desc()).paginate(page, current_app.config['POSTS_PER_PAGE'], False)
+
+    next_url = url_for('main.messages', page=msgs.next_num) \
+        if msgs.has_next else None
+    prev_url = url_for('main.messages', page=msgs.prev_num) \
+        if msgs.has_prev else None
+    return render_template('messages.html', title='Messages', messages=msgs.items,
+                            next_url=next_url, prev_url=prev_url)
+
+@bp.route('/send_message/<recipient_name>', methods=['GET', 'POST'])
+@login_required
+def send_message(recipient_name):
+    form = MessageForm()
+    if form.validate_on_submit():
+        recipient = User.query.filter_by(username=recipient_name).first_or_404()
+        new_msg = Message(author=current_user, recipient=recipient, body=form.message.data)
+        db.session.add(new_msg)
+        db.session.commit()
+
+        flash('Message sent successfully')
+        return redirect(url_for('main.user', username=recipient_name))
+    return render_template('send_message.html', title='Send message', form=form, recipient=recipient_name)

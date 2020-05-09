@@ -7,6 +7,8 @@ import jwt
 from time import time
 from flask import current_app
 from app.search import query_index, add_to_index, remove_from_index, delete_index
+import redis
+import rq
 
 followers = db.Table(
     'followers',
@@ -16,7 +18,7 @@ followers = db.Table(
 
 class User(UserMixin, db.Model):
 
-    # database part
+    # database part -- User model
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
@@ -25,10 +27,13 @@ class User(UserMixin, db.Model):
     about_me = db.Column(db.String(140))
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
 
+    last_message_read_time = db.Column(db.DateTime, default=datetime.utcnow)
+
     # relationship: post.author will return a user
     posts = db.relationship('Post', backref='author', lazy='dynamic')
+    tasks = db.relationship('Task', backref='user', lazy='dynamic')
 
-    # relationship:
+    # relationship: follower and followed
     followed = db.relationship(
         'User', secondary=followers,
         primaryjoin=(followers.c.follower_id == id),
@@ -36,6 +41,21 @@ class User(UserMixin, db.Model):
         backref=db.backref('followers', lazy='dynamic'),
         lazy='dynamic'
     )
+
+    # relationship: sent and received messages
+    messages_sent = db.relationship(
+        'Message',          # user.messages_sent
+        foreign_keys='Message.sender_id',
+        backref='author',   # message_sent.author
+        lazy='dynamic'
+    )
+    messages_received = db.relationship(
+        'Message',          # user.messages_received
+        foreign_keys='Message.recipient_id',
+        backref='recipient',   # message_received.recipient
+        lazy='dynamic'
+    )
+
 
     def __repr__(self): 
         return '<User {}>'.format(self.username)
@@ -77,6 +97,23 @@ class User(UserMixin, db.Model):
         # jwt.encode(...) return a byte sequence
         return jwt.encode({'reset_password': self.id, 'exp': time() + expire_in}, 
             current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+
+    def new_messages(self):
+        last_read_time = self.last_message_read_time or datetime(1900, 1, 1)
+        return  Message.query.filter_by(recipient=self).filter(Message.timestamp > last_read_time).count()
+
+    # redis tasks
+    def launch_task(self, name, description, *args, **kwargs):
+        rq_job = current_app.task_queue.enqueue('app.tasks.'+name, self.id, *args, **kwargs)
+        task = Task(id=rq_job.get_id(), name=name, description=description, user=self)
+        db.session.add(task)
+        return task
+    
+    def get_tasks_in_progress(self):
+        return Task.query.filter_by(user=self, complete=False).all()
+    
+    def get_first_task_in_progress_by_name(self, name):
+        return Task.query.filter_by(user=self, name=name, complete=False).first()
     
     @staticmethod
     def verify_reset_password_token(token):
@@ -171,3 +208,31 @@ class Post(SearchableMixin ,db.Model):
 
     def __repr__(self):
         return '<Post {}>'.format(self.body)
+
+class Task(db.Model):
+    id = db.Column(db.String(36), primary_key=True)
+    name = db.Column(db.String(128), index=True)
+    description = db.Column(db.String(128))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    complete = db.Column(db.Boolean, default=False)
+
+    def get_rq_job(self):
+        try:
+            rq_job = rq.job.Job.fetch(self.id, current_app.redis)
+        except (redis.exceptions.RedisError, rq.exceptions.NoSuchJobError):
+            rq_job = None
+        return rq_job
+
+    def get_progress(self):
+        job = self.get_rq_job()
+        return job.meta.get('progress', 0) if job is not None else 100
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    body = db.Column(db.String(140))
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+    def __repr__(self):
+        return '<Message: {}>'.format(self.body)
