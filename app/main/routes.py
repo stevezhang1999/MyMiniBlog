@@ -1,10 +1,10 @@
-from flask import render_template, flash, redirect, url_for, request
+from flask import render_template, flash, redirect, url_for, request, jsonify
 from werkzeug.urls import url_parse
 from flask import current_app, g
 
 from app import db
 from app.main.forms import EditProfileForm, PostForm, SearchForm, MessageForm
-from app.models import User, Post, Message
+from app.models import User, Post, Message, Notification
 
 from flask_login import current_user, login_user
 from flask_login import logout_user
@@ -147,6 +147,7 @@ def search():
 @login_required
 def messages():
     current_user.last_message_read_time = datetime.utcnow()
+    current_user.add_notification('unread_message_count', 0)
     db.session.commit()
 
     page = request.args.get('page', 1, int)
@@ -166,9 +167,25 @@ def send_message(recipient_name):
     if form.validate_on_submit():
         recipient = User.query.filter_by(username=recipient_name).first_or_404()
         new_msg = Message(author=current_user, recipient=recipient, body=form.message.data)
+        recipient.add_notification('unread_message_count', recipient.new_messages())
         db.session.add(new_msg)
         db.session.commit()
 
         flash('Message sent successfully')
         return redirect(url_for('main.user', username=recipient_name))
     return render_template('send_message.html', title='Send message', form=form, recipient=recipient_name)
+
+@bp.route('/notifications')
+@login_required
+def notifications():
+    '''
+    return json serialized data
+    '''
+    since = request.args.get('since', 0.0, float)
+    notificatioins = current_user.notifications.filter(Notification.timestamp > since).order_by(Notification.timestamp.asc())
+
+    return jsonify([{
+        'name': n.name,
+        'data': n.get_data(),
+        'timestamp': n.timestamp
+    } for n in notificatioins] )

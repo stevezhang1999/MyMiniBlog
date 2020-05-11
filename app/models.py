@@ -9,6 +9,7 @@ from flask import current_app
 from app.search import query_index, add_to_index, remove_from_index, delete_index
 import redis
 import rq
+import json
 
 followers = db.Table(
     'followers',
@@ -56,6 +57,13 @@ class User(UserMixin, db.Model):
         lazy='dynamic'
     )
 
+    # relationship: notification
+    notifications = db.relationship(
+        'Notification',
+        foreign_keys='Notification.user_id',
+        backref='user',   # notification.user
+        lazy='dynamic'
+    )
 
     def __repr__(self): 
         return '<User {}>'.format(self.username)
@@ -101,6 +109,12 @@ class User(UserMixin, db.Model):
     def new_messages(self):
         last_read_time = self.last_message_read_time or datetime(1900, 1, 1)
         return  Message.query.filter_by(recipient=self).filter(Message.timestamp > last_read_time).count()
+
+    def add_notification(self, name, data):
+        self.notifications.filter_by(name=name).delete()
+        n = Notification(name=name, payload_json=json.dumps(data), user=self)
+        db.session.add(n)
+        return n
 
     # redis tasks
     def launch_task(self, name, description, *args, **kwargs):
@@ -236,3 +250,17 @@ class Message(db.Model):
 
     def __repr__(self):
         return '<Message: {}>'.format(self.body)
+
+class Notification(db.Model):
+    # generic notification
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.Float, index=True, default=time)
+    payload_json = db.Column(db.Text)
+
+    def __repr__(self):
+        return '<Notification: {}>'.format(self.body)
+
+    def get_data(self):
+        return json.loads(str(self.payload_json))
